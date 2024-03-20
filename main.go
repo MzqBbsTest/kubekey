@@ -50,6 +50,7 @@ var (
 )
 
 func init() {
+	//将clientgoscheme中的API资源类型添加到scheme中。
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 	utilruntime.Must(clusterv1.AddToScheme(scheme))
 	utilruntime.Must(infrav1.AddToScheme(scheme))
@@ -72,19 +73,26 @@ var (
 )
 
 func main() {
+	// 初始化k8s 日志
 	klog.InitFlags(nil)
-
+	// 随机种子
 	rand.Seed(time.Now().UnixNano())
+	// 初始化 pflag
+	// 映射flag到pflag
+	// 解析
 	initFlags(pflag.CommandLine)
 	pflag.CommandLine.AddGoFlagSet(flag.CommandLine)
 	pflag.Parse()
 
+	// 设置k8s 控制器日志对象
 	ctrl.SetLogger(klogr.New())
-
+	// 监听信号
 	ctx := ctrl.SetupSignalHandler()
-
+	// 获取或创建Kubernetes客户端配置
 	restConfig := ctrl.GetConfigOrDie()
+	// 设置请求的UserAgent
 	restConfig.UserAgent = "cluster-api-provider-kk-controller"
+	// 创建Kubernetes控制器管理器
 	mgr, err := ctrl.NewManager(restConfig, ctrl.Options{
 		Scheme:                     scheme,
 		MetricsBindAddress:         metricsAddr,
@@ -103,6 +111,11 @@ func main() {
 	}
 
 	log := ctrl.Log.WithName("remote").WithName("ClusterCacheTracker")
+	//创建一个远程集群缓存跟踪器实例tracker。
+	// 管理器对象，用于管理远程集群的连接和缓存
+	// 是远程集群缓存跟踪器的配置选项，
+	// 		其中Log字段指定了使用之前创建的日志对象log，
+	//		Indexes字段指定了使用默认的索引。
 	tracker, err := remote.NewClusterCacheTracker(
 		mgr,
 		remote.ClusterCacheTrackerOptions{
